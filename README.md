@@ -1,7 +1,8 @@
 # Smoldb
 
-a Lua library that allows you to interface a slite3 database with no sqlite query
+A Lua library that allows you to interface a slite3 database with no sqlite query.
 
+A big thanks to [Enmap](https://enmap.evie.dev/), which heavily inspired my work.
 
 ## Summary
 ---
@@ -42,6 +43,8 @@ p(db:get("userid"))
 ## Documentation
 You can build a documentation with [ldoc](https://github.com/lunarmodules/LDoc)
 
+Some things and aspects of the library may not be documented, and I'm really sorry if so. If you need help open an issue on github and i'll help you.
+
 ## Properties
 ### `smoldb.name`
 Database name (represent the table name)
@@ -50,7 +53,7 @@ Database name (represent the table name)
 Sqlite file
 
 ### `smoldb.cache`
-If cache is activated, store all cached datas
+If cache is activated, store all cached data
 
 ### `smoldb.options`
 options provided to smoldb. Do not modify
