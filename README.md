@@ -1,6 +1,6 @@
 # Smoldb
 
-A Lua library that allows you to interface a slite3 database with no sqlite query.
+A Lua library that allows you to interface a sqlite3 database with no sqlite query.
 
 A big thanks to [Enmap](https://enmap.evie.dev/), which heavily inspired my work.
 

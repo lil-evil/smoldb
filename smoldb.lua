@@ -1,6 +1,6 @@
   --[[lit-meta
     name = "lil-evil/smoldb"
-    version = "1.0.0"
+    version = "1.0.1"
     dependencies = {
       "lil-evil/table-watcher",
       "SinisterRectus/sqlite3"
@@ -22,7 +22,7 @@ local table_watcher = require"table-watcher"
 local sqlite = require"sqlite3"
 
 local smoldb = {
-  package = {version="1.0.0"},
+  package = {version="1.0.1"},
   err = {}
 }
 
@@ -194,7 +194,7 @@ end
 --- decode given data using custom unpacker or json.decode by default
 ---@param data string
 function smoldb:decode(data)
-  local unpacker = type(self.unpacker) == "function" and self.unpacker or json.decode
+  local unpacker = type(self.options.unpacker) == "function" and self.options.unpacker or json.decode
   
   local unpacked, _, error = unpacker(data)
   if error then 
@@ -219,7 +219,7 @@ function smoldb:get(key)
   if type(key) ~= "string" then return self:__error("key must be a string") end
 
   local data, error = self:fetch(key)
-  if data == self.err then return self.err, error end
+  if data == self.err then return self:__error(err) end
 
   if type(data) == "table" then
       local events = deep_clone(watcher_events)
@@ -339,7 +339,7 @@ function smoldb:destroy(name)
       err:step()
       err:close()
   end
-  local state, err = pcall(self.db.prepare, self.db, "INSERT OR IGNORE INTO 'internal::smoldb' (tbl, version, date) VALUES ('"..name.."', '"..self._version.."', "..os.time()..")")
+  local state, err = pcall(self.db.prepare, self.db, "INSERT OR IGNORE INTO 'internal::smoldb' (tbl, version, date) VALUES ('"..name.."', '"..self.package.version.."', "..os.time()..")")
   if not state then return self:__error(err)
   else
       err:step()
@@ -535,7 +535,7 @@ function smoldb:export()
 
   return {
       name = self.name,
-      file = self.options.dir .. "/" .. self.options.file,
+      file = self.db_file,
       version = self._version,
       export_date = os.time(),
       created_date = info.created_date,
