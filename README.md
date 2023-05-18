@@ -69,6 +69,7 @@ All unclosed stmt. Do not modify
 
 ### `smoldb:connect(name, options)`
 Initialize and connect to the database
+
 **Parameters:**
 - `name`: if nil or empty string, database reside on memory
 - `options`
@@ -143,7 +144,7 @@ Return whether or not the key exists
 - `key`: the key to return
 
 **Returns:**
-- `data`: Value for the given key
+- `data`: true or false
 
 ### `smoldb:delete(key)`
 Delete a key if it exists
