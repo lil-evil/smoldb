@@ -17,7 +17,7 @@ A big thanks to [Enmap](https://enmap.evie.dev/), which heavily inspired my work
 
 ## Installation
 
-You can install table-watcher using [lit](https://github.com/luvit/lit). Run the following command:
+You can install smoldb using [lit](https://github.com/luvit/lit). Run the following command:
 
 ```shell
 $ lit install lil-evil/smoldb
