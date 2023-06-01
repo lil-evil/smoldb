@@ -1,19 +1,10 @@
 local smoldb = require"../smoldb"
--- we are using message-pack for encoding/decoding data
-local msgpack = require"./msgpack"
+local json = require"json"
 
-
+-- volatile database
 local db = smoldb("", {
-    packer = function(data)
-        local state, err = pcall(msgpack.pack, data)
-        if not state then return nil, err end
-        return err
-    end,
-    unpacker = function(data)
-        local state, err = pcall(msgpack.unpack, data)
-        if not state then return nil, #data, err end
-        return err, #data
-    end,
+    packer = json.encode,
+    unpacker = json.decode,
     -- ensure that we get data directly from database, not cached objects
     cache = false
 })

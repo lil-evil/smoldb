@@ -4,6 +4,11 @@ luac.out
 # lit deps
 deps/
 
+# testing databases
+test/data/
+tmp/
+data/
+
 # luarocks build files
 *.src.rock
 *.zip

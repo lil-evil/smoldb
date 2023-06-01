@@ -26,9 +26,12 @@ $ lit install lil-evil/smoldb
 Dependencies :
 - [SinisterRectus/sqlite3](https://github.com/SinisterRectus/lit-sqlite3)
 - [lil-evil/table-watcher](https://github.com/lil-evil/table-watcher)
+- [creationix/msgpack](https://github.com/super-agent/msgpack)*
+
+*\* : a segfault error forced me to include the fixed version into smoldb. When the lit package will be fixed, smoldb will use the lit package*
 ## Usage
 
-To use table-watcher in your Lua project, you need to require the module:
+To use smoldb in your Lua project, you need to require the module:
 
 ```lua
 local smoldb = require("smoldb")
@@ -79,8 +82,8 @@ Initialize and connect to the database
     - `wal`: see https://www.sqlite.org/wal.html
     - `cache`: whether or not to cache data that have been fetch
     - `throw`: if true, functions are allowed to call error() instead of returning (nil, "error")
-    - `packer`: data serializer, default json.encode
-    - `unpacker`: data deserializer, default json.decode
+    - `packer`: data serializer, default msgpack.encode
+    - `unpacker`: data deserializer, default msgpack.decode
 
 **Returns:**
 - `smoldb`: smoldb instance
@@ -224,7 +227,8 @@ Return a table containing all database's values
 - `nocache`: whether or not to not cache fetched value
 
 **Returns:**
-- `data`: random keys got 
+- `data`: random key got 
+- ... : depend of the `count` of items asked
 
 ### `smoldb:clear_cache(key)`
 Clear whole cache or just a key
@@ -267,7 +271,7 @@ Import database with internal information using self.decode
 **Returns:** none
 
 ### `smoldb:encode(data)`
-Encode given data using custom packer or json.encode by default
+Encode given data using custom packer or msgpack.encode by default
 
 **Parameters:**
 - `data`: any data supported by the encoder
@@ -276,7 +280,7 @@ Encode given data using custom packer or json.encode by default
 - `encoded`: encoded data
 
 ### `smoldb:decode(data)`
-Decode given data using custom unpacker or json.decode by default
+Decode given data using custom unpacker or msgpack.decode by default
 
 **Parameters:**
 - `data` : any data supported by the decoder
@@ -294,6 +298,12 @@ throw or return nil, "error". internal syntax sugar
 
 ## Changelog
 You can see the full changelog [here](./changelog.md).
+
+### Breaking changes
+- **1.1.0** : changed default packer/unpacker from json to message pack. To migrate database to this version, you can :
+    - use `smoldb:export()` from the old version and transfer it to the new version with `smoldb:import(data)` from the newer version.
+    - set json.encode and json.decode as custom packer/unpacker in options.
+
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for more information.

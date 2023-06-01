@@ -1,9 +1,10 @@
   --[[lit-meta
     name = "lil-evil/smoldb"
-    version = "1.0.1"
+    version = "1.1.0"
     dependencies = {
       "lil-evil/table-watcher",
-      "SinisterRectus/sqlite3"
+      "SinisterRectus/sqlite3",
+      --"creationix/msgpack"
     }
     description = "A sqlite3 code abstraction"
     tags = { "database", "sqlite3", "db" }
@@ -16,13 +17,13 @@
 ---@module smoldb
 local process = require"process".globalProcess()
 local fs = require"fs"
-local json = require"json"
+local msgpack = nil
 
 local table_watcher = require"table-watcher"
 local sqlite = require"sqlite3"
 
 local smoldb = {
-  package = {version="1.0.1"},
+  package = {version="1.1.0"},
   err = {}
 }
 
@@ -103,8 +104,8 @@ process:on("exit", function() for _, i in ipairs(instances) do i:close() end end
 ---@param options.wal boolean see https://www.sqlite.org/wal.html
 ---@param options.cache boolean whether or not to cache data that have been fetch
 ---@param options.throw boolean if true, functions are allowed to call error() instead of returning (nil, "error")
----@param options.packer function data serializer, default json.encode
----@param options.unpacker function data deserializer, default json.decode
+---@param options.packer function data serializer, default msgpack.encode
+---@param options.unpacker function data deserializer, default msgpack.decode
 function smoldb:connect(name, options)
   local smdb = deep_clone(self)
 
@@ -154,10 +155,29 @@ function smoldb:connect(name, options)
   con:exec("CREATE TABLE IF NOT EXISTS 'internal::smoldb' (tbl TEXT PRIMARY KEY NOT NULL, version VARCHAR(15), date int)")
   con:exec("CREATE TABLE IF NOT EXISTS '"..smdb.name.."' (key TEXT PRIMARY KEY NOT NULL, value TEXT)")
   con:exec("INSERT OR IGNORE INTO 'internal::smoldb' (tbl, version, date) VALUES ('"..smdb.name.."', '"..smdb.package.version.."', "..os.time()..");")
+  
+  -- version check
+---@diagnostic disable-next-line: undefined-field
+  if not _G.SMOLDB_IGNORE_VERSION then  
+    local db_version = smdb:get_info().version
+    if db_version < "1.1.0" then
+      -- Yes thoses messages are annoying, but your data is important, operate carefully.
+      print(string.format("\x1b[31;7mWARNING\x1b[27m : Database version (%s) missmatch with smoldb current version (%s).\x1b[0m", db_version, smoldb.package.version))
+      print("\x1b[31;7mWARNING\x1b[27m : You will encounter data corruption if you keep using the database as is.\x1b[0m")
+      print("\x1b[31;7mWARNING\x1b[27m : Please see https://github.com/lil-evil/smoldb/blob/master/README.md#changelog\x1b[0m")
+      print("\x1b[31;7mWARNING\x1b[27m : The app wil now exit. To avoid this behavior, set \"SMOLDB_IGNORE_VERSION=true\" as global. Use at your own risk.\x1b[0m")
+      con:close()
+      os.exit(1) -- avoid any data corruption
+    end
+  else
+    print("\x1b[31;7mWARNING\x1b[27m : smoldb will not check versions. Your data may end corrupted.\x1b[0m")
+  end
   table.insert(instances, smdb)
 
   smdb.connect = nil
   smdb.handles = {}
+
+  
 
   return setmetatable(smdb,
     {  __len = function(self) return self:size() end}
@@ -179,10 +199,10 @@ function smoldb:__error(err)
       return self.err, err
   end
 end
---- encode given data using custom packer or json.encode by default
+--- encode given data using custom packer or msgpack.encode by default
 ---@param data any
 function smoldb:encode(data)
-  local packer = type(self.options.packer) == "function" and self.options.packer or json.encode
+  local packer = type(self.options and self.options.packer) == "function" and self.options.packer or msgpack.encode
   
   local packed, error = packer(data)
   if error then 
@@ -191,14 +211,14 @@ function smoldb:encode(data)
       return packed
   end
 end
---- decode given data using custom unpacker or json.decode by default
+--- decode given data using custom unpacker or msgpack.decode by default
 ---@param data string
 function smoldb:decode(data)
-  local unpacker = type(self.options.unpacker) == "function" and self.options.unpacker or json.decode
+  local unpacker = type(self.options and self.options.packer) == "function" and self.options.unpacker or msgpack.decode
   
-  local unpacked, _, error = unpacker(data)
-  if error then 
-      return self:__error(error)
+  local unpacked, _, err = unpacker(data)
+  if err then 
+      return self:__error(err)
   else
       return unpacked
   end
@@ -218,7 +238,7 @@ end
 function smoldb:get(key)
   if type(key) ~= "string" then return self:__error("key must be a string") end
 
-  local data, error = self:fetch(key)
+  local data, err = self:fetch(key)
   if data == self.err then return self:__error(err) end
 
   if type(data) == "table" then
@@ -493,7 +513,7 @@ function smoldb:random(count, nocache)
       if not nocache and type(self.cache) == "table" and self.options.cache then
           
       end
-      return #cache > 1 and cache or cache[1]
+      return table.unpack(cache)
   end
 end
 
@@ -562,6 +582,10 @@ function smoldb:import(data)
   end
   err:close()
 end
+
+-- minified version of msgpack in wait of lit package fix
+local a=math.floor;local b=math.ceil;local c=math.huge;local d=string.char;local e=string.byte;local f=string.sub;local g=require('bit')local h=g.rshift;local i=g.lshift;local j=g.band;local k=g.bor;local l=table.concat;local m=require('ffi')local n=m.new("double[1]")local o=m.new("float[1]")local p=m.cast;local q=m.copy;local r;do local s=m.new("int16_t[1]")s[0]=1;local t=m.cast("uint8_t*",s)r=t[0]==0 end;local u=m.typeof('uint8_t[?]')local function v(w)return d(h(w,8),j(w,0xff))end;local function x(w)return d(h(w,24),j(h(w,16),0xff),j(h(w,8),0xff),j(w,0xff))end;local function y(z,A)return k(i(e(z,A),8),e(z,A+1))end;local function B(z,A)return k(i(e(z,A),24),i(e(z,A+1),16),i(e(z,A+2),8),e(z,A+3))end;local function C(D)local E=type(D)if E=="nil"then return"\xc0"elseif E=="boolean"then return D and"\xc3"or"\xc2"elseif E=="number"then if D==c or D==-c or D~=D then o[0]=D;local F=p("uint8_t*",o)if r then return d(0xCA,F[0],F[1],F[2],F[3])else return d(0xCA,F[3],F[2],F[1],F[0])end elseif a(D)~=D then n[0]=D;local F=p("uint8_t*",n)if r then return d(0xCB,F[0],F[1],F[2],F[3],F[4],F[5],F[6],F[7])else return d(0xCB,F[7],F[6],F[5],F[4],F[3],F[2],F[1],F[0])end else if D>=0 then if D<0x80 then return d(D)elseif D<0x100 then return"\xcc"..d(D)elseif D<0x10000 then return"\xcd"..v(D)elseif D<0x100000000 then return"\xce"..x(D)else return"\xcf"..x(a(D/0x100000000))..x(D%0x100000000)end else if D>=-0x20 then return d(0x100+D)elseif D>=-0x80 then return"\xd0"..d(0x100+D)elseif D>=-0x8000 then return"\xd1"..v(0x10000+D)elseif D>=-0x80000000 then return"\xd2"..x(0x100000000+D)elseif D>=-0x100000000 then return"\xd3\xff\xff\xff\xff"..x(0x100000000+D)else local G=b(D/0x100000000)local H=D-G*0x100000000;if H==0 then G=0x100000000+G else G=0xffffffff+G;H=0x100000000+H end;return"\xd3"..x(G)..x(H)end end end elseif E=="string"then local I=#D;if I<0x20 then return d(k(0xa0,I))..D elseif I<0x100 then return"\xd9"..d(I)..D elseif I<0x10000 then return"\xda"..v(I)..D elseif I<0x100000000 then return"\xdb"..x(I)..D else error("String too long: "..I.." bytes")end elseif E=="cdata"then local I=m.sizeof(D)D=m.string(D,I)if I<0x100 then return"\xc4"..d(I)..D elseif I<0x10000 then return"\xc5"..v(I)..D elseif I<0x100000000 then return"\xc6"..x(I)..D else error("Buffer too long: "..I.." bytes")end elseif E=="table"then local J=false;local K=1;local L=0;for M in pairs(D)do if type(M)~="number"or M<1 or M>10 and M~=K then J=true;break else L=M;K=K+1 end end;if J then local N=0;local O={}for M,P in pairs(D)do O[#O+1]=C(M)O[#O+1]=C(P)N=N+1 end;D=l(O)if N<16 then return d(k(0x80,N))..D elseif N<0x10000 then return"\xde"..v(N)..D elseif N<0x100000000 then return"\xdf"..x(N)..D else error("map too big: "..N)end else local O={}local I=L;for Q=1,I do O[Q]=C(D[Q])end;D=l(O)if I<0x10 then return d(k(0x90,I))..D elseif I<0x10000 then return"\xdc"..v(I)..D elseif I<0x100000000 then return"\xdd"..x(I)..D else error("Array too long: "..I.."items")end end else error("Unknown type: "..E)end end;local R,S;local function T(z,A)local U=e(z,A+1)if U<0x80 then return U,1 elseif U>=0xe0 then return U-0x100,1 elseif U<0x90 then return R(j(U,0xf),z,A,A+1)elseif U<0xa0 then return S(j(U,0xf),z,A,A+1)elseif U<0xc0 then local V=1+j(U,0x1f)return f(z,A+2,A+V),V elseif U==0xc0 then return nil,1 elseif U==0xc2 then return false,1 elseif U==0xc3 then return true,1 elseif U==0xcc then return e(z,A+2),2 elseif U==0xcd then return y(z,A+2),3 elseif U==0xce then return B(z,A+2)%0x100000000,5 elseif U==0xcf then return B(z,A+2)%0x100000000*0x100000000+B(z,A+6)%0x100000000,9 elseif U==0xd0 then local w=e(z,A+2)return w>=0x80 and w-0x100 or w,2 elseif U==0xd1 then local w=y(z,A+2)return w>=0x8000 and w-0x10000 or w,3 elseif U==0xd2 then return B(z,A+2),5 elseif U==0xd3 then local G=B(z,A+2)local H=B(z,A+6)if H<0 then G=G+1 end;return G*0x100000000+H,9 elseif U==0xd9 then local V=2+e(z,A+2)return f(z,A+3,A+V),V elseif U==0xda then local V=3+y(z,A+2)return f(z,A+4,A+V),V elseif U==0xdb then local V=5+B(z,A+2)%0x100000000;return f(z,A+6,A+V),V elseif U==0xc4 then local F=e(z,A+2)local V=2+F;return u(F,f(z,A+3,A+V)),V elseif U==0xc5 then local F=y(z,A+2)local V=3+F;return u(F,f(z,A+4,A+V)),V elseif U==0xc6 then local F=B(z,A+2)%0x100000000;local V=5+F;return u(F,f(z,A+6,A+V)),V elseif U==0xca then if r then local W=f(z,2,5)q(o,W,#W)else local W=d(e(z,A+5),e(z,A+4),e(z,A+3),e(z,A+2))q(o,W,#W)end;return o[0],5 elseif U==0xcb then if r then local W=f(z,2,9)q(n,W,#W)else local W=d(e(z,A+9),e(z,A+8),e(z,A+7),e(z,A+6),e(z,A+5),e(z,A+4),e(z,A+3),e(z,A+2))q(n,W,#W)end;return n[0],9 elseif U==0xdc then return S(y(z,A+2),z,A,A+3)elseif U==0xdd then return S(B(z,A+2)%0x100000000,z,A,A+5)elseif U==0xde then return R(y(z,A+2),z,A,A+3)elseif U==0xdf then return R(B(z,A+2)%0x100000000,z,A,A+5)else error("TODO: more types: "..string.format("%02x",U))end end;function S(N,z,A,X)local Y={}for Q=1,N do local V;Y[Q],V=T(z,X)X=X+V end;return Y,X-A end;function R(N,z,A,X)local Z={}for _=1,N do local V,M;M,V=T(z,X)X=X+V;Z[M],V=T(z,X)X=X+V end;return Z,X-A end;
+msgpack = {encode=C,decode=function(z,A)return T(z,A or 0)end}
 
 local smoldb_meta = {
   __call = function(self, name, options) return self:connect(name, options) end,
