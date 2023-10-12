@@ -11,3 +11,6 @@
 - change of default packer/unpacker from json to message pack
 
 => correct json inability to reflect lua table (both an array and object, which are two different type in json) and performance gain
+
+# 1.1.1
+- fixed `ensure` which was not copying default object and cause cache linkage on items ensured with the same default object
