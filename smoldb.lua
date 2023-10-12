@@ -1,6 +1,6 @@
   --[[lit-meta
     name = "lil-evil/smoldb"
-    version = "1.1.0"
+    version = "1.1.1"
     dependencies = {
       "lil-evil/table-watcher",
       "SinisterRectus/sqlite3",
@@ -23,7 +23,7 @@ local table_watcher = require"table-watcher"
 local sqlite = require"sqlite3"
 
 local smoldb = {
-  package = {version="1.1.0"},
+  package = {version="1.1.1"},
   err = {}
 }
 
@@ -274,8 +274,9 @@ function smoldb:ensure(key, default)
   if data == self.err then return self:__error(err), err end
 
   if data == nil then
-      self:set(key, default)
-      data = default
+    local _default = deep_clone(default)
+      self:set(key, _default)
+      data = _default
   end
 
   if type(data) == "table" then
